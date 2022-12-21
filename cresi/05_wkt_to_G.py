@@ -1,16 +1,3 @@
-#!/usr/bin/env python2
-# -*- coding: utf-8 -*-
-"""
-Created on Tue May  8 00:10:40 2018
-
-@author: avanetten
-
-Read in a list of wkt linestrings, render to networkx graph, with geo coords
-Note:
-    osmnx.simplify_graph() is fragile and often returns erroneous projections
-"""
-
-from __future__ import print_function
 import os
 import utm
 import shapely.wkt
@@ -25,16 +12,11 @@ import json
 import pandas as pd
 import numpy as np
 import time
-import matplotlib.pyplot as plt
-import logging
 from multiprocessing.pool import Pool
 
 # import cv2
 from utils import make_logger, rdp, osmnx_funcs
 from configs.config import Config
-
-logger1 = None
-
 
 ###############################################################################
 # from apls.py
@@ -1087,19 +1069,13 @@ def wkt_to_G(params):
         )
 
     # Get rid of non-intersection nodes
-    # to_remove = [n for n, x in Gout.degree if x <= 2]
+    # to_remove = [n for n, x in Gout.degree if x <= 1]
     # Gout.remove_nodes_from(to_remove)
 
     # get rid of roads
     # edges = list(Gout.edges())
     # Gout.remove_edges_from(edges)
 
-    # get a few stats (and set to graph properties)
-    if verbose:
-        logger1.info("Number of nodes: {}".format(len(Gout.nodes())))
-        logger1.info("Number of edges: {}".format(len(Gout.edges())))
-    # print ("Number of nodes:", len(Gout.nodes()))
-    # print ("Number of edges:", len(Gout.edges()))
     Gout.graph["N_nodes"] = len(Gout.nodes())
     Gout.graph["N_edges"] = len(Gout.edges())
 
@@ -1119,23 +1095,11 @@ def wkt_to_G(params):
         nx.write_gpickle(Gout, out_file, protocol=pickle_protocol)
         return
 
-    # # print a node
-    # node = list(Gout.nodes())[-1]
-    # print (node, "random node props:", Gout.nodes[node])
-    # # print an edge
-    # edge_tmp = list(Gout.edges())[-1]
-    # #print (edge_tmp, "random edge props:", G.edges([edge_tmp[0], edge_tmp[1]])) #G.edge[edge_tmp[0]][edge_tmp[1]])
-    # print (edge_tmp, "random edge props:", Gout.get_edge_data(edge_tmp[0], edge_tmp[1]))
-
     # save graph
-    if verbose:
-        logger1.info("Saving graph to directory: {}".format(graph_dir))
-    # print ("Saving graph to directory:", graph_dir)
     nx.write_gpickle(Gout, out_file, protocol=pickle_protocol)
 
     # # save shapefile as well?
     if True:  # save_shapefiles:
-        logger1.info("Saving shapefile to directory: {}".format(graph_dir))
         try:
             for node, data in Gout.nodes(data=True):
                 if "osmid" in data:
@@ -1159,9 +1123,6 @@ def wkt_to_G(params):
 ################################################################################
 def main():
 
-    global logger1
-
-    # min_subgraph_length_pix = 300
     simplify_graph = True  # True # False
     verbose = False
     pickle_protocol = 4  # 4 is most recent, python 2.7 can't read 4
@@ -1178,7 +1139,7 @@ def main():
         config = Config(**cfg)
 
     # outut files
-    res_root_dir = os.path.join(config.path_results_root, config.test_results_dir)
+    res_root_dir = os.path.join(config.path_results_root)
     raw_data_dir = os.path.join(config.raw_data_dir)
 
     csv_file = os.path.join(res_root_dir, config.wkt_submission)
@@ -1188,13 +1149,6 @@ def main():
 
     min_subgraph_length_pix = config.min_subgraph_length_pix
     min_spur_length_m = config.min_spur_length_m
-
-    console, logger1 = make_logger.make_logger(
-        log_file, logger_name="log", write_to_console=bool(config.log_to_console)
-    )
-
-    # read in wkt list
-    logger1.info("df_wkt at: {}".format(csv_file))
 
     df_wkt = pd.read_csv(csv_file)
 
@@ -1210,11 +1164,6 @@ def main():
     for i, image_id in enumerate(image_ids):
         out_file = os.path.join(graph_dir, image_id.split(".")[0] + ".gpickle")
 
-        if verbose:
-            logger1.info(
-                "\n{x} / {y}, {z}".format(x=i + 1, y=len(image_ids), z=image_id)
-            )
-
         # for geo referencing, im_file should be the raw image
         print(image_id)
         if config.num_channels == 3:
@@ -1223,14 +1172,6 @@ def main():
         # filter
         df_filt = df_wkt["WKT_Pix"][df_wkt["ImageId"] == image_id]
         wkt_list = df_filt.values
-
-        # print a few values
-        if verbose:
-            logger1.info(
-                "\n{x} / {y}, num linestrings: {z}".format(
-                    x=i + 1, y=len(image_ids), z=len(wkt_list)
-                )
-            )
 
         if verbose:
             print("image_file:", im_file)
@@ -1268,7 +1209,6 @@ def main():
         wkt_to_G(params[0])
 
     tf = time.time()
-    logger1.info("Time to run wkt_to_G.py: {} seconds".format(tf - t0))
     print("Time to run wkt_to_G.py: {} seconds".format(tf - t0))
 
     # write to shape file

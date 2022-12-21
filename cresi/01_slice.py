@@ -2,7 +2,6 @@ import os
 import json
 import argparse
 
-from utils.utils import update_config
 from configs.config import Config
 
 
@@ -17,9 +16,6 @@ if __name__ == "__main__":
     with open(args.config_path, "r") as f:
         cfg = json.load(f)
     config = Config(**cfg)
-    config = update_config(
-        config, target_rows=config.eval_rows, target_cols=config.eval_cols
-    )
 
     # set images folder (depending on if we are slicing or not)
     if (len(config.eight_bit_dir) > 0) and (config.slice_x > 0):

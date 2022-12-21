@@ -2,7 +2,6 @@ from skimage.morphology import (
     skeletonize,
     remove_small_objects,
     remove_small_holes,
-    medial_axis,
 )
 import numpy as np
 from matplotlib.pylab import plt
@@ -22,7 +21,6 @@ import skimage.draw
 import skimage.io
 import cv2
 
-from utils import make_logger
 from configs.config import Config
 
 logger1 = None
@@ -184,10 +182,6 @@ def visualize(img, G, vertices):
             ps = val.get("pts", [])
             plt.plot(ps[:, 1], ps[:, 0], "green")
 
-    # draw node by o
-    node, nodes = G.node(), G.nodes
-    # deg = G.degree
-    # ps = np.array([node[i]['o'] for i in nodes])
     ps = np.array(vertices)
     plt.plot(ps[:, 1], ps[:, 0], "r.")
 
@@ -339,10 +333,7 @@ def add_small_segments(
     dists = {}
     for s, e in good_pairs:
         s_d, e_d = [G.nodes[s]["o"], G.nodes[e]["o"]]
-        # print("s_d", s_d)
-        # print("type s_d", type(s_d))
-        # print("s_d - e_d", s_d - e_d)
-        # return
+
         dists[(s, e)] = np.linalg.norm(s_d - e_d)
 
     dists = OrderedDict(sorted(dists.items(), key=lambda x: x[1]))
@@ -424,7 +415,6 @@ def make_skeleton(
         print("make_skeleton(), img.shape:", img.shape)
         print("make_skeleton(), img.size:", img.size)
         print("make_skeleton(), img dtype:", img.dtype)
-        # print("make_skeleton(), img unique:", np.unique(img))
 
     ##########
     # potentially keep only subset of data
@@ -548,22 +538,17 @@ def img_to_ske_G(params):
         verbose=verbose,
     )
 
-    # print("img_loc:", img_loc)
-
-    # img_copy, ske = make_skeleton(root, fn, debug, threshes, fix_borders)
     if ske is None:
         return [linestring.format("EMPTY"), [], []]
+
     # save to file
     if out_ske_file:
         cv2.imwrite(out_ske_file, ske.astype(np.uint8) * 255)
-        ## write portion to file?
-        # out_ske_part = out_ske_file.split('.tif')[0] + '_part.tif'
-        # print('out_ske_part_path', out_ske_part)
-        # cv2.imwrite(out_ske_part, ske[0:2000, 0:2000].astype(np.uint8)*220)
 
     # create graph
     if verbose:
         print("Execute sknw...")
+
     # if the file is too large, use sknw_int64 to accomodate high numbers
     #   for coordinates
     if np.max(ske.shape) > 32767:
@@ -868,7 +853,6 @@ def build_wkt_dir(
 ###############################################################################
 def main():
 
-    global logger1
     add_small = True
     verbose = True
     super_verbose = False
@@ -899,18 +883,11 @@ def main():
     print("min_spur_length_pix:", min_spur_length_pix)
     use_medial_axis = bool(config.use_medial_axis)
     print("Use_medial_axis?", use_medial_axis)
-    pix_extent = config.eval_rows - (2 * config.padding)
 
     # check if we are stitching together large images or not
-    out_dir_mask_norm = os.path.join(
-        config.path_results_root, config.test_results_dir, config.stitched_dir_norm
-    )
-    folds_dir = os.path.join(
-        config.path_results_root, config.test_results_dir, config.folds_save_dir
-    )
-    merge_dir = os.path.join(
-        config.path_results_root, config.test_results_dir, config.merged_dir
-    )
+    out_dir_mask_norm = os.path.join(config.path_results_root, config.stitched_dir_norm)
+    folds_dir = os.path.join(config.path_results_root, config.folds_save_dir)
+    merge_dir = os.path.join(config.path_results_root, config.merged_dir)
 
     if os.path.exists(out_dir_mask_norm):
         im_dir = out_dir_mask_norm
@@ -924,7 +901,7 @@ def main():
     os.makedirs(im_dir, exist_ok=True)
 
     # outut files
-    res_root_dir = os.path.join(config.path_results_root, config.test_results_dir)
+    res_root_dir = os.path.join(config.path_results_root)
     outfile_csv = os.path.join(res_root_dir, config.wkt_submission)
     # outfile_gpickle = os.path.join(res_root_dir, 'G_sknw.gpickle')
     out_ske_dir = os.path.join(
@@ -946,11 +923,6 @@ def main():
     thresh = config.skeleton_thresh
 
     min_subgraph_length_pix = config.min_subgraph_length_pix
-
-    log_file = os.path.join(res_root_dir, "skeleton.log")
-    console, logger1 = make_logger.make_logger(
-        log_file, logger_name="log", write_to_console=bool(config.log_to_console)
-    )
 
     # print("Building wkts...")
     t0 = time.time()
@@ -988,7 +960,7 @@ def main():
     print("len df:", len(df))
     print("outfile:", outfile_csv)
     t1 = time.time()
-    logger1.info("Total time to run build_wkt_dir: {} seconds".format(t1 - t0))
+
     print("Total time to run build_wkt_dir:", t1 - t0, "seconds")
 
 
