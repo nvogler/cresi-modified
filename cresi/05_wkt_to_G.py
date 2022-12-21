@@ -1090,9 +1090,45 @@ def wkt_to_G(params):
     # to_remove = [n for n, x in Gout.degree if x <= 2]
     # Gout.remove_nodes_from(to_remove)
 
-    # get rid of roads
-    # edges = list(Gout.edges())
-    # Gout.remove_edges_from(edges)
+    # create kml object
+    import simplekml
+
+    kml = simplekml.Kml()
+
+    # # Get rid of non-intersection nodes
+    to_remove = [n for n, x in G1.degree if x <= 2]
+    G1.remove_nodes_from(to_remove)
+
+    for i, (n, attr_dict) in enumerate(G1.nodes(data=True)):
+        pt = kml.newpoint(
+            name="Intersection",
+            description="Intersection",
+            coords=[(attr_dict["lon"], attr_dict["lat"])],
+        )
+
+        pt.style.linestyle.color = "ff0000ff"  # red
+        pt.style.linestyle.width = 5
+    kml.save("/opt/cresi/results/nodes.kml")
+    # attr_dict["geometry_wkt"] = attr_dict["geometry"].wkt
+
+    kml = simplekml.Kml()
+    for i, (u, v, attr_dict) in enumerate(G1.edges(data=True)):
+        coords = []
+
+        line_str = attr_dict["geometry_latlon_wkt"]
+        line_str = line_str[12:-1].split(",")
+        for x_y_ in line_str:
+            x_y_ = x_y_.strip()
+
+            lon, lat = x_y_.split(" ")
+            coords.append((lon, lat))
+
+        ln = kml.newlinestring(name="Road", description="Road", coords=coords,)
+
+        # ln.style.linestyle.color = "ff00ff"  # red
+        # ln.style.linestyle.width = 5
+
+    kml.save("/opt/cresi/results/edges.kml")
 
     # get a few stats (and set to graph properties)
     if verbose:

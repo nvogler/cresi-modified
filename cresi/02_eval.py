@@ -29,7 +29,6 @@ from net.dataset.raw_image import RawImageType
 from net.pytorch_utils.concrete_eval import FullImageEvaluator
 from utils.utils import update_config
 from configs.config import Config
-from utils import make_logger
 
 
 ###############################################################################
@@ -136,10 +135,6 @@ if __name__ == "__main__":
             config.path_results_root, "weights", config.save_weights_dir
         )
 
-    log_file = os.path.join(
-        config.path_results_root, config.test_results_dir, "test.log"
-    )
-    print("log_file:", log_file)
     # make sure output folders exist
     save_dir = os.path.join(
         config.path_results_root, config.test_results_dir, config.folds_save_dir
@@ -158,15 +153,9 @@ if __name__ == "__main__":
     print("image_suffix:", image_suffix)
     ###################
 
-    # set up logging
-    console, logger = make_logger.make_logger(
-        log_file, logger_name="log", write_to_console=bool(config.log_to_console)
-    )
-
-    logger.info("Testing: weight_dir: {x}".format(x=weight_dir))
     # execute
     t0 = time.time()
-    logging.info("Saving eval outputs to: {x}".format(x=save_dir))
+
     folds = eval_cresi(
         config,
         paths,
@@ -179,11 +168,7 @@ if __name__ == "__main__":
         nfolds=config.num_folds,
     )
     t1 = time.time()
-    logger.info(
-        "Time to run {x} folds for {y} = {z} seconds".format(
-            x=len(folds), y=len(os.listdir(config.sliced_dir)), z=t1 - t0
-        )
-    )
+
     print(
         "Time to run",
         len(folds),
