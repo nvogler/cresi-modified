@@ -100,7 +100,7 @@ def project_gdf(gdf, to_crs=None, to_latlong=False, verbose=False):
 
 
 ###############################################################################
-def project_graph(G, to_crs=None, verbose=False):
+def project_graph(G, to_crs=None, to_latlong=False, verbose=False):
     """
     https://github.com/gboeing/osmnx/blob/v0.9/osmnx/projection.py#L126
     Project a graph from lat-long to the UTM zone appropriate for its geographic
@@ -124,8 +124,8 @@ def project_graph(G, to_crs=None, verbose=False):
     gdf_nodes = gpd.GeoDataFrame(list(data), index=nodes)
     # create new lat/lon columns just to save that data for later, and create a
     # geometry column from x/y
-    gdf_nodes['lon'] = gdf_nodes['x']
-    gdf_nodes['lat'] = gdf_nodes['y']
+    #gdf_nodes['lon'] = gdf_nodes['x']
+    #gdf_nodes['lat'] = gdf_nodes['y']
     gdf_nodes['geometry'] = gdf_nodes.apply(lambda row: Point(row['x'], row['y']), axis=1)
     gdf_nodes.crs = G_proj.graph['crs']
     gdf_nodes.gdf_name = '{}_nodes'.format(G_proj.name)
@@ -134,7 +134,7 @@ def project_graph(G, to_crs=None, verbose=False):
         print('Created a GeoDataFrame from graph in {:,.2f} seconds'.format(time.time()-start_time))
 
     # project the nodes GeoDataFrame to UTM
-    gdf_nodes_utm = project_gdf(gdf_nodes, to_crs=to_crs)
+    gdf_nodes_utm = project_gdf(gdf_nodes, to_crs=to_crs, to_latlong=to_latlong)
 
     # extract data for all edges that have geometry attribute
     edges_with_geom = []
@@ -150,7 +150,7 @@ def project_graph(G, to_crs=None, verbose=False):
         gdf_edges = gpd.GeoDataFrame(edges_with_geom)
         gdf_edges.crs = G_proj.graph['crs']
         gdf_edges.gdf_name = '{}_edges'.format(G_proj.name)
-        gdf_edges_utm = project_gdf(gdf_edges, to_crs=to_crs)
+        gdf_edges_utm = project_gdf(gdf_edges, to_crs=to_crs, to_latlong=to_latlong)
 
     # extract projected x and y values from the nodes' geometry column
     start_time = time.time()
@@ -190,6 +190,7 @@ def project_graph(G, to_crs=None, verbose=False):
         G_proj.graph['streets_per_node'] = G.graph['streets_per_node']
     if verbose:
         print('Rebuilt projected graph in {:,.2f} seconds'.format(time.time()-start_time))
+
     return G_proj
 
 

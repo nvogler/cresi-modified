@@ -595,7 +595,9 @@ def wkt_to_G(params):
         G0 = ox.simplify_graph(Gout.to_directed())
         G0 = G0.to_undirected()
 
-        Gout = osmnx_funcs.project_graph(G0)
+        # this break latlon for shape files and kmls, don't really need utm atm
+        # Gout = osmnx_funcs.project_graph(G0, to_latlong=True)
+        Gout = G0
 
         # BUG, GOOF, ERROR IN OSMNX PROJECT, SO NEED TO MANUALLY SET X, Y FOR NODES!!??
         if manually_reproject_nodes:
@@ -673,14 +675,12 @@ def wkt_to_G(params):
             # update 'length_pix'
             attr_dict["length_pix"] = np.sum([attr_dict["length_pix"]])
 
-    print(G0)
-    print(G1)
     # create kml object
     kml = simplekml.Kml()
-    for i, (u, v, attr_dict) in enumerate(G1.edges(data=True)):
+    for i, (u, v, attr_dict) in enumerate(Gout.edges(data=True)):
         coords = []
 
-        line_str = attr_dict["geometry_latlon_wkt"]
+        line_str = str(attr_dict["geometry_latlon_wkt"])
         line_str = line_str[12:-1].split(",")
         for x_y_ in line_str:
             x_y_ = x_y_.strip()
@@ -689,27 +689,28 @@ def wkt_to_G(params):
             coords.append((lon, lat))
 
         ln = kml.newlinestring(name="Road", description="Road", coords=coords,)
-
-        ln.style.linestyle.color = "ff00ff"  # red
+        ln.extrude = 1
+        ln.style.linestyle.color = simplekml.Color.blue
         ln.style.linestyle.width = 5
 
     kml.save(os.path.join(geo_dir, "roads.kml"))
 
     kml = simplekml.Kml()
 
-    # # Get rid of non-intersection nodes
-    to_remove = [n for n, x in G1.degree if x <= 2]
-    G1.remove_nodes_from(to_remove)
+    # record non-intersection nodes
+    node_ends = [n for n, x in Gout.degree if x <= 1]
 
-    for i, (n, attr_dict) in enumerate(G1.nodes(data=True)):
-        pt = kml.newpoint(
-            name="Intersection",
-            description="Intersection",
-            coords=[(attr_dict["lon"], attr_dict["lat"])],
-        )
+    for i, (n, attr_dict) in enumerate(Gout.nodes(data=True)):
+        if n not in node_ends:
 
-        pt.style.linestyle.color = "ff0000ff"  # red
-        pt.style.linestyle.width = 5
+            pt = kml.newpoint(
+                name="Intersection",
+                description="Intersection",
+                coords=[(attr_dict["lon"], attr_dict["lat"])],
+            )
+
+            ln.style.linestyle.color = simplekml.Color.yellow
+
     kml.save(os.path.join(geo_dir, "intersections.kml"))
 
     Gout.graph["N_nodes"] = len(Gout.nodes())
