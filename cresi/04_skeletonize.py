@@ -2,7 +2,6 @@ from skimage.morphology import (
     skeletonize,
     remove_small_objects,
     remove_small_holes,
-    medial_axis,
 )
 import numpy as np
 from matplotlib.pylab import plt
@@ -22,10 +21,8 @@ import skimage.draw
 import skimage.io
 import cv2
 
-from utils import make_logger
 from configs.config import Config
 
-logger1 = None
 linestring = "LINESTRING {}"
 
 
@@ -548,22 +545,13 @@ def img_to_ske_G(params):
         verbose=verbose,
     )
 
-    # print("img_loc:", img_loc)
-
-    # img_copy, ske = make_skeleton(root, fn, debug, threshes, fix_borders)
     if ske is None:
         return [linestring.format("EMPTY"), [], []]
+
     # save to file
     if out_ske_file:
         cv2.imwrite(out_ske_file, ske.astype(np.uint8) * 255)
-        ## write portion to file?
-        # out_ske_part = out_ske_file.split('.tif')[0] + '_part.tif'
-        # print('out_ske_part_path', out_ske_part)
-        # cv2.imwrite(out_ske_part, ske[0:2000, 0:2000].astype(np.uint8)*220)
 
-    # create graph
-    if verbose:
-        print("Execute sknw...")
     # if the file is too large, use sknw_int64 to accomodate high numbers
     #   for coordinates
     if np.max(ske.shape) > 32767:
@@ -571,21 +559,10 @@ def img_to_ske_G(params):
     else:
         G = sknw.build_sknw(ske, multi=True)
 
-    # print a random node and edge
-    if verbose:
-        node_tmp = list(G.nodes())[-1]
-        print(node_tmp, "random node props:", G.nodes[node_tmp])
-        # print an edge
-        edge_tmp = list(G.edges())[-1]
-        # print("random edge props for edge:", edge_tmp, " = ",
-        #      G.edges[edge_tmp[0], edge_tmp[1], 0]) #G.edge[edge_tmp[0]][edge_tmp[1]])
-
     # iteratively clean out small terminals
     for itmp in range(8):
         ntmp0 = len(G.nodes())
-        if verbose:
-            print("Clean out small terminals - round", itmp)
-            print("Clean out small terminals - round", itmp, "num nodes:", ntmp0)
+        
         # sknw attaches a 'weight' property that is the length in pixels
         pix_extent = np.max(ske.shape)
         remove_small_terminal(
@@ -594,6 +571,7 @@ def img_to_ske_G(params):
             min_weight_val=min_spur_length_pix,
             pix_extent=pix_extent,
         )
+
         # kill the loop if we stopped removing nodes
         ntmp1 = len(G.nodes())
         if ntmp0 == ntmp1:
@@ -601,24 +579,8 @@ def img_to_ske_G(params):
         else:
             continue
 
-    if verbose:
-        print("len G.nodes():", len(G.nodes()))
-        print("len G.edges():", len(G.edges()))
     if len(G.edges()) == 0:
         return [linestring.format("EMPTY"), [], []]
-
-    # print a random node and edge
-    if verbose:
-        node_tmp = list(G.nodes())[-1]
-        print(node_tmp, "random node props:", G.nodes[node_tmp])
-        # print an edge
-        edge_tmp = list(G.edges())[-1]
-        print(
-            "random edge props for edge:",
-            edge_tmp,
-            " = ",
-            G.edges[edge_tmp[0], edge_tmp[1], 0],
-        )
 
     # remove self loops
     ebunch = nx.selfloop_edges(G)
@@ -641,14 +603,10 @@ def G_to_wkt(
     verbose=False,
 ):
     """Transform G to wkt"""
-
-    # print("G:", G)
     if G == [linestring.format("EMPTY")] or type(G) == str:
         return [linestring.format("EMPTY")]
 
     node_lines = graph2lines(G)
-    # if verbose:
-    #    print("node_lines:", node_lines)
 
     if not node_lines:
         return [linestring.format("EMPTY")]
@@ -656,14 +614,12 @@ def G_to_wkt(
         node = G.node
     except:
         node = G.nodes
-    # print("node:", node)
+        
     deg = dict(G.degree())
     wkt = []
     terminal_points = [i for i, d in deg.items() if d == 1]
 
     # refine wkt
-    if verbose:
-        print("Refine wkt...")
     terminal_lines = {}
     vertices = []
     for i, w in enumerate(node_lines):
@@ -676,7 +632,7 @@ def G_to_wkt(
             for ix, val in enumerate(vals):
 
                 s_coord, e_coord = node[s]["o"], node[e]["o"]
-                # print("s_coord:", s_coord, "e_coord:", e_coord)
+                
                 pts = val.get("pts", [])
                 if s in terminal_points:
                     terminal_lines[s] = (s_coord, e_coord)
@@ -776,9 +732,7 @@ def build_wkt_dir(
     for i, imfile in enumerate(im_files):
 
         t1 = time.time()
-        if verbose:
-            print("\n", i + 1, "/", nfiles, ":", imfile)
-        logger1.info("{x} / {y} : {z}".format(x=i + 1, y=nfiles, z=imfile))
+
         img_loc = os.path.join(indir, imfile)
 
         if spacenet_naming_convention:
@@ -788,15 +742,11 @@ def build_wkt_dir(
         if len(im_prefix) > 0:
             im_root = im_root.split(im_prefix)[-1]
 
-        if verbose:
-            print("  img_loc:", img_loc)
-            print("  im_root:", im_root)
         if out_ske_dir:
             out_ske_file = os.path.join(out_ske_dir, imfile)
         else:
             out_ske_file = ""
-        if verbose:
-            print("  out_ske_file:", out_ske_file)
+            
         if len(out_gdir) > 0:
             out_gpickle = os.path.join(out_gdir, imfile.split(".")[0] + ".gpickle")
         else:
@@ -854,9 +804,8 @@ def build_wkt_dir(
         # add to all_data
         for v in wkt_list:
             all_data.append((im_root, v))
-            # all_data.append((imfile, v))
+
         t2 = time.time()
-        logger1.info("Time to build graph: {} seconds".format(t2 - t1))
 
     # save to csv
     df = pd.DataFrame(all_data, columns=["ImageId", "WKT_Pix"])
@@ -868,7 +817,6 @@ def build_wkt_dir(
 ###############################################################################
 def main():
 
-    global logger1
     add_small = True
     verbose = True
     super_verbose = False
@@ -899,7 +847,6 @@ def main():
     print("min_spur_length_pix:", min_spur_length_pix)
     use_medial_axis = bool(config.use_medial_axis)
     print("Use_medial_axis?", use_medial_axis)
-    pix_extent = config.eval_rows - (2 * config.padding)
 
     # check if we are stitching together large images or not
     out_dir_mask_norm = os.path.join(
@@ -926,10 +873,11 @@ def main():
     # outut files
     res_root_dir = os.path.join(config.path_results_root, config.test_results_dir)
     outfile_csv = os.path.join(res_root_dir, config.wkt_submission)
-    # outfile_gpickle = os.path.join(res_root_dir, 'G_sknw.gpickle')
+    
     out_ske_dir = os.path.join(
         res_root_dir, config.skeleton_dir
     )  # set to '' to not save
+
     os.makedirs(out_ske_dir, exist_ok=True)
     if len(config.skeleton_pkl_dir) > 0:
         out_gdir = os.path.join(
@@ -947,12 +895,6 @@ def main():
 
     min_subgraph_length_pix = config.min_subgraph_length_pix
 
-    log_file = os.path.join(res_root_dir, "skeleton.log")
-    console, logger1 = make_logger.make_logger(
-        log_file, logger_name="log", write_to_console=bool(config.log_to_console)
-    )
-
-    # print("Building wkts...")
     t0 = time.time()
     df = build_wkt_dir(
         im_dir,
@@ -987,8 +929,9 @@ def main():
 
     print("len df:", len(df))
     print("outfile:", outfile_csv)
+
     t1 = time.time()
-    logger1.info("Total time to run build_wkt_dir: {} seconds".format(t1 - t0))
+
     print("Total time to run build_wkt_dir:", t1 - t0, "seconds")
 
 

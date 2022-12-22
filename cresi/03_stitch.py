@@ -1,4 +1,3 @@
-from __future__ import print_function
 import os
 import json
 import argparse
@@ -8,7 +7,6 @@ import skimage.io
 import cv2
 import time
 from configs.config import Config
-from utils import make_logger
 
 
 ###############################################################################
@@ -198,31 +196,19 @@ def main():
     os.makedirs(out_dir_mask_raw, exist_ok=True)
     os.makedirs(out_dir_count, exist_ok=True)
 
-    res_root_dir = os.path.join(config.path_results_root, config.test_results_dir)
-    log_file = os.path.join(res_root_dir, "stitch.log")
-    console, logger1 = make_logger.make_logger(
-        log_file, logger_name="log", write_to_console=bool(config.log_to_console)
-    )
-
     # read in df_pos
-    # df_file = os.path.join(out_dir_root, 'tile_df.csv')
     df_pos_tot = pd.read_csv(path_tile_df_csv)
-    logger1.info("len df_pos_tot: {x}".format(x=len(df_pos_tot)))
-    # print("len df_pos_tot:", len(df_pos_tot))
+    
     t0 = time.time()
     ttot = 0
 
     # save for each individual image
     idxs = np.sort(np.unique(df_pos_tot["idx"]))
-    logger1.info("image idxs: {x}".format(x=idxs))
-    # print("image idxs:", idxs)
+    
     for idx in idxs:
-        logger1.info("idx: {x} / {y}".format(x=idx + 1, y=len(idxs)))
-        # print("\nidx:", idx, "/", len(idxs))
         # filter by idx
         df_pos = df_pos_tot.loc[df_pos_tot["idx"] == idx]
-        logger1.info("len df_pos: {x}".format(x=len(df_pos)))
-        # print("len df_pos:", len(df_pos))
+
         # execute
         t1 = time.time()
         name, mask_norm, mask_raw, overlay_count = post_process_image(
@@ -234,11 +220,7 @@ def main():
         )
         t2 = time.time()
         ttot += t2 - t1
-        logger1.info(
-            "Time to run stitch for idx: {x} = {y} seconds".format(x=idx, y=t2 - t1)
-        )
-        # print("Time to run stitch for idx:", idx, "=", t2 - t1, "seconds")
-        logger1.info("mask_norm.shape: {x}".format(x=mask_norm.shape))
+
         print("mask_norm.dtype:", mask_norm.dtype)
         print("mask_raw.dtype:", mask_raw.dtype)
         print("overlay_count.dtype:", overlay_count.dtype)
@@ -247,14 +229,13 @@ def main():
 
         # write to files (cv2 can't handle reading enormous files, can write large ones)
         print("Saving to files...")
+
         # remove prefix, if required
         if len(im_prefix) > 0:
             out_file_root = name.split(im_prefix)[-1] + ".tif"
         else:
             out_file_root = name + ".tif"
 
-        logger1.info("out_file_root {x}".format(x=out_file_root))
-        # print("out_file_root:", out_file_root)
         out_file_mask_norm = os.path.join(out_dir_mask_norm, out_file_root)
         out_file_mask_raw = os.path.join(out_dir_mask_raw, out_file_root)
         out_file_count = os.path.join(out_dir_count, out_file_root)
@@ -296,14 +277,6 @@ def main():
         del overlay_count
 
     t3 = time.time()
-    logger1.info(
-        "Time to run stitch.py and create large masks: {} seconds".format(ttot)
-    )
-    logger1.info(
-        "Time to run stitch.py and create large masks (and save): {} seconds".format(
-            t3 - t0
-        )
-    )
     
     print(
         "Time to run stitch.py and create large masks (and save):", t3 - t0, "seconds"

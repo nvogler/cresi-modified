@@ -1,13 +1,6 @@
 import time
-import cv2
-
-cv2.setNumThreads(0)
-cv2.ocl.setUseOpenCL(False)
 import os
-
-# import shutil
 import torch
-import logging
 import json
 import glob
 import argparse
@@ -20,14 +13,9 @@ from tqdm import tqdm
 tqdm.monitor_interval = 0
 ############
 
-from net.augmentations.transforms import (
-    get_flips_colors_augmentation,
-    get_flips_shifts_augmentation,
-)
 from net.dataset.reading_image_provider import ReadingImageProvider
 from net.dataset.raw_image import RawImageType
 from net.pytorch_utils.concrete_eval import FullImageEvaluator
-from utils.utils import update_config
 from configs.config import Config
 
 
@@ -104,9 +92,6 @@ if __name__ == "__main__":
     with open(args.config_path, "r") as f:
         cfg = json.load(f)
     config = Config(**cfg)
-    config = update_config(
-        config, target_rows=config.eval_rows, target_cols=config.eval_cols
-    )
 
     # check image files
     exts = (
