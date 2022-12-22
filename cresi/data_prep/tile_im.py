@@ -149,20 +149,23 @@ def main():
 
     # get input dir
     path_tile_df_csv = os.path.join(config.path_results_root, config.tile_df_csv)
+    eight_bit_dir = os.path.join(config.path_data_root, config.eight_bit_dir)
+    sliced_dir = os.path.join(config.path_data_root, config.sliced_dir)
 
     # make output dirs
     os.makedirs(config.path_results_root, exist_ok=True)
-    os.makedirs(config.sliced_dir, exist_ok=True)
+    os.makedirs(sliced_dir, exist_ok=True)
+    os.makedirs(eight_bit_dir, exist_ok=True)
 
     print("Output path for sliced images:", config.sliced_dir)
 
     # only run if nonzero tile and sliced_dir
-    if (len(config.sliced_dir) > 0) and (config.slice_x > 0):
+    if (len(sliced_dir) > 0) and (config.slice_x > 0):
         print("processing starting")
 
         df_pos = slice_ims(
-            config.eight_bit_dir,
-            config.sliced_dir,
+            eight_bit_dir,
+            sliced_dir,
             config.slice_x,
             config.slice_y,
             config.stride_x,

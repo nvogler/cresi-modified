@@ -523,6 +523,7 @@ def wkt_to_G(params):
         manually_reproject_nodes,
         out_file,
         graph_dir,
+        geo_dir,
         n_threads,
     ) = params
 
@@ -672,6 +673,8 @@ def wkt_to_G(params):
             # update 'length_pix'
             attr_dict["length_pix"] = np.sum([attr_dict["length_pix"]])
 
+    print(G0)
+    print(G1)
     # create kml object
     kml = simplekml.Kml()
     for i, (u, v, attr_dict) in enumerate(G1.edges(data=True)):
@@ -690,12 +693,12 @@ def wkt_to_G(params):
         ln.style.linestyle.color = "ff00ff"  # red
         ln.style.linestyle.width = 5
 
-    kml.save("/opt/cresi/results/edges.kml")
+    kml.save(os.path.join(geo_dir, "roads.kml"))
 
     kml = simplekml.Kml()
 
     # # Get rid of non-intersection nodes
-    to_remove = [n for n, x in G1.degree if x <= 1]
+    to_remove = [n for n, x in G1.degree if x <= 2]
     G1.remove_nodes_from(to_remove)
 
     for i, (n, attr_dict) in enumerate(G1.nodes(data=True)):
@@ -707,7 +710,7 @@ def wkt_to_G(params):
 
         pt.style.linestyle.color = "ff0000ff"  # red
         pt.style.linestyle.width = 5
-    kml.save("/opt/cresi/results/nodes.kml")
+    kml.save(os.path.join(geo_dir, "intersections.kml"))
 
     Gout.graph["N_nodes"] = len(Gout.nodes())
     Gout.graph["N_edges"] = len(Gout.edges())
@@ -719,30 +722,22 @@ def wkt_to_G(params):
 
     Gout.graph["Tot_edge_km"] = tot_meters / 1000
 
-    # save
-    if len(Gout.nodes()) == 0:
-        nx.write_gpickle(Gout, out_file, protocol=pickle_protocol)
-        return
-
     # save graph
     nx.write_gpickle(Gout, out_file, protocol=pickle_protocol)
 
-    # # save shapefile as well?
-    if True:  # save_shapefiles:
-        try:
-            for node, data in Gout.nodes(data=True):
-                if "osmid" in data:
-                    data["osmid_original"] = data.pop("osmid")
+    # # save shapefile
+    try:
+        for node, data in Gout.nodes(data=True):
+            if "osmid" in data:
+                data["osmid_original"] = data.pop("osmid")
 
-            ox.save_graph_shapefile(
-                Gout, os.path.join(graph_dir, "test"), encoding="utf-8"
-            )
+        ox.save_graph_shapefile(
+            Gout, os.path.join(geo_dir, "shapefiles"), encoding="utf-8"
+        )
 
-        except Exception as e:
-            print(e)
-            print("Cannot save shapefile...")
-
-    t7 = time.time()
+    except Exception as e:
+        print(e)
+        print("Cannot save shapefile...")
 
     return  # Gout
 
@@ -764,11 +759,14 @@ def main():
         config = Config(**cfg)
 
     # outut files
-    raw_data_dir = os.path.join(config.raw_data_dir)
+    raw_data_dir = os.path.join(config.path_data_root, config.raw_data_dir)
 
     csv_file = os.path.join(config.path_results_root, config.wkt_submission)
     graph_dir = os.path.join(config.path_results_root, config.graph_dir)
+    geo_dir = os.path.join(config.path_results_root, config.geo_output_dir)
+
     os.makedirs(graph_dir, exist_ok=True)
+    os.makedirs(geo_dir, exist_ok=True)
 
     min_spur_length_m = config.min_spur_length_m
 
@@ -813,6 +811,7 @@ def main():
                     manually_reproject_nodes,
                     out_file,
                     graph_dir,
+                    geo_dir,
                     n_threads,
                 )
             )

@@ -42,5 +42,6 @@ Config = namedtuple(
         "target_cols",
         "target_rows",
         "ignore_target_size",
+        "geo_output_dir",
     ],
 )

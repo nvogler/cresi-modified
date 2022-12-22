@@ -698,9 +698,10 @@ def main():
     )  # set to '' to not save
 
     os.makedirs(out_ske_dir, exist_ok=True)
+
     if len(config.skeleton_pkl_dir) > 0:
         out_gdir = os.path.join(
-            res_root_dir, config.skeleton_pkl_dir
+            res_root_dir, config.graph_dir, config.skeleton_pkl_dir
         )  # set to '' to not save
         os.makedirs(out_gdir, exist_ok=True)
     else:

@@ -103,15 +103,18 @@ if __name__ == "__main__":
         "*.png",
     )  # the tuple of file types
     files_grabbed = []
+
+    sliced_dir = os.path.join(config.path_data_root, config.sliced_dir)
+
     for ext in exts:
-        files_grabbed.extend(glob.glob(os.path.join(config.sliced_dir, ext)))
+        files_grabbed.extend(glob.glob(os.path.join(sliced_dir, ext)))
 
     if len(files_grabbed) == 0:
         print("02_eval.py: No valid image files to process, returning...")
 
         exit(1)
 
-    paths = {"masks": "", "images": config.sliced_dir}
+    paths = {"masks": "", "images": sliced_dir}
     # set weights_dir (same as weight_save_path)
     if config.save_weights_dir.startswith("/"):
         weight_dir = config.save_weights_dir
@@ -158,7 +161,7 @@ if __name__ == "__main__":
         "Time to run",
         len(folds),
         "folds for",
-        len(os.listdir(config.sliced_dir)),
+        len(os.listdir(sliced_dir)),
         "=",
         t1 - t0,
         "seconds",
