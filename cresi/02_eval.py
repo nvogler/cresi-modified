@@ -76,7 +76,7 @@ def eval_cresi(
             if args.fold is not None and int(args.fold) != fold:
                 print("ummmm....")
                 continue
-            keval.predict(fold, e, weight_dir, verbose=False)
+            keval.predict(fold, e, weight_dir)
 
     return folds
 
@@ -122,7 +122,7 @@ if __name__ == "__main__":
 
     # make sure output folders exist
     save_dir = os.path.join(
-        config.path_results_root, config.test_results_dir, config.folds_save_dir
+        config.path_results_root, config.folds_save_dir
     )
     print("save_dir:", save_dir)
     os.makedirs(save_dir, exist_ok=True)

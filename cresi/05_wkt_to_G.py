@@ -25,12 +25,7 @@ from configs.config import Config
 # from apls.py
 ###############################################################################
 def clean_sub_graphs(
-    G_,
-    min_length=300,
-    max_nodes_to_skip=20,
-    weight="length_pix",
-    verbose=True,
-    super_verbose=False,
+    G_, min_length=300, max_nodes_to_skip=20, weight="length_pix",
 ):
     """Remove subgraphs with a max path length less than min_length,
     if the subgraph has more than max_noxes_to_skip, don't check length
@@ -77,7 +72,7 @@ def clean_sub_graphs(
 
 
 ###############################################################################
-def remove_short_edges(G_, min_spur_length_m=2, length_key="length", verbose=False):
+def remove_short_edges(G_, min_spur_length_m=2, length_key="length"):
     """Remove unconnected edges shorter than the desired length"""
 
     deg_list = list(G_.degree)
@@ -99,18 +94,6 @@ def remove_short_edges(G_, min_spur_length_m=2, length_key="length", verbose=Fal
             # edge_props = G_.edges([u, v])
             if length < min_spur_length_m:
                 bad_nodes.append(n)
-                if verbose:
-                    print(
-                        i,
-                        "/",
-                        len(list(G_.nodes())),
-                        "n, deg, u, v, length:",
-                        n,
-                        deg,
-                        u,
-                        v,
-                        length,
-                    )
 
     G_.remove_nodes_from(bad_nodes)
 
@@ -320,7 +303,7 @@ def pixelToGeoCoord(params):
 
 
 ##############################################################################
-def get_node_geo_coords(G, im_file, fix_utm_zone=True, n_threads=12, verbose=False):
+def get_node_geo_coords(G, im_file, fix_utm_zone=True, n_threads=12):
     # get pixel params
     params = []
     nn = len(G.nodes())
@@ -353,9 +336,7 @@ def get_node_geo_coords(G, im_file, fix_utm_zone=True, n_threads=12, verbose=Fal
         # fix zone
         if i == 0 or fix_utm_zone == False:
             [utm_east, utm_north, utm_zone, utm_letter] = utm.from_latlon(lat, lon)
-            if verbose and (i == 0):
-                print("utm_letter:", utm_letter)
-                print("utm_zone:", utm_zone)
+
         else:
             [utm_east, utm_north, _, _] = utm.from_latlon(
                 lat, lon, force_zone_number=utm_zone, force_zone_letter=utm_letter
@@ -377,7 +358,7 @@ def get_node_geo_coords(G, im_file, fix_utm_zone=True, n_threads=12, verbose=Fal
 
 
 ##############################################################################
-def get_node_geo_coords_single_threaded(G, im_file, fix_utm_zone=True, verbose=False):
+def get_node_geo_coords_single_threaded(G, im_file, fix_utm_zone=True):
 
     for i, (n, attr_dict) in enumerate(G.nodes(data=True)):
 
@@ -420,7 +401,7 @@ def convert_pix_lstring_to_geo(params):
     Or just force utm zone and letter explicitly
     """
 
-    identifier, geom_pix_wkt, im_file, utm_zone, utm_letter, verbose = params
+    identifier, geom_pix_wkt, im_file, utm_zone, utm_letter = params
     shape = shapely.wkt.loads(geom_pix_wkt)
     x_pixs, y_pixs = shape.xy
     coords_latlon = []
@@ -449,13 +430,7 @@ def convert_pix_lstring_to_geo(params):
 
 ###############################################################################
 def get_edge_geo_coords(
-    G,
-    im_file,
-    remove_pix_geom=True,
-    fix_utm_zone=True,
-    n_threads=12,
-    verbose=False,
-    super_verbose=False,
+    G, im_file, remove_pix_geom=True, fix_utm_zone=True, n_threads=12
 ):
     """Get geo coords of all edges"""
 
@@ -481,11 +456,9 @@ def get_edge_geo_coords(
         geom_pix = attr_dict["geometry_pix"]
 
         if fix_utm_zone == False:
-            params.append(((u, v), geom_pix.wkt, im_file, None, None, super_verbose))
+            params.append(((u, v), geom_pix.wkt, im_file, None, None))
         else:
-            params.append(
-                ((u, v), geom_pix.wkt, im_file, utm_zone, utm_letter, super_verbose)
-            )
+            params.append(((u, v), geom_pix.wkt, im_file, utm_zone, utm_letter))
 
     n_threads = min(n_threads, ne)
 
@@ -542,7 +515,6 @@ def wkt_to_G(params):
     (
         wkt_list,
         im_file,
-        min_subgraph_length_pix,
         node_iter,
         edge_iter,
         min_spur_length_m,
@@ -552,7 +524,6 @@ def wkt_to_G(params):
         out_file,
         graph_dir,
         n_threads,
-        verbose,
     ) = params
 
     print("im_file:", im_file)
@@ -572,13 +543,7 @@ def wkt_to_G(params):
     # run clean_sub_graph() in 04_skeletonize.py?  - Nope, do it here
     # so that adding small terminals works better...
 
-    G1 = clean_sub_graphs(
-        G0,
-        min_length=min_subgraph_length_pix,
-        weight="length_pix",
-        verbose=verbose,
-        super_verbose=False,
-    )
+    G1 = clean_sub_graphs(G0, min_length=300, weight="length_pix")
 
     if len(G1) == 0:
         return G1
@@ -590,7 +555,7 @@ def wkt_to_G(params):
             n_threads_tmp = 1
         else:
             n_threads_tmp = n_threads_max
-        G1 = get_node_geo_coords(G1, im_file, n_threads=n_threads_tmp, verbose=verbose)
+        G1 = get_node_geo_coords(G1, im_file, n_threads=n_threads_tmp)
 
         # let's not over multi-thread a multi-thread
         if n_threads > 1:
@@ -598,7 +563,7 @@ def wkt_to_G(params):
         else:
             n_threads_tmp = n_threads_max
 
-        G1 = get_edge_geo_coords(G1, im_file, n_threads=n_threads_tmp, verbose=verbose)
+        G1 = get_edge_geo_coords(G1, im_file, n_threads=n_threads_tmp)
 
         G_projected = osmnx_funcs.project_graph(G1)
         # get geom wkt (for printing/viewing purposes)
@@ -608,7 +573,7 @@ def wkt_to_G(params):
         Gout = G_projected  # G_simp
 
     else:
-        Gout = G0
+        Gout = G1
 
     # ###########################################################################
     # # remove short edges?
@@ -645,8 +610,6 @@ def wkt_to_G(params):
             "geometry_utm_wkt",
         ]
         for key_tmp in keys_tmp:
-            if verbose:
-                print("Merge", key_tmp, "...")
             for i, (u, v, attr_dict) in enumerate(Gout.edges(data=True)):
                 if key_tmp not in attr_dict.keys():
                     continue
@@ -671,8 +634,6 @@ def wkt_to_G(params):
 
                 # now straighten edge with rdp
                 if rdp_epsilon > 0:
-                    if verbose and ((i % 10000) == 0):
-                        print("  Applying rdp...")
                     coords = list(geom_out.coords)
                     new_coords = rdp.rdp(coords, epsilon=rdp_epsilon)
                     geom_out_rdp = LineString(new_coords)
@@ -695,8 +656,6 @@ def wkt_to_G(params):
         # !! assign 'geometry' tag to geometry_utm_wkt
         key_tmp = "geometry_wkt"  # 'geometry_utm_wkt'
         for i, (u, v, attr_dict) in enumerate(Gout.edges(data=True)):
-            if verbose and ((i % 10000) == 0):
-                print("Create 'geometry' field in edges...")
             line = attr_dict["geometry_utm_wkt"]
             if type(line) == str:  # or type(line) == unicode:
                 attr_dict["geometry"] = shapely.wkt.loads(line)
@@ -784,17 +743,13 @@ def wkt_to_G(params):
             print("Cannot save shapefile...")
 
     t7 = time.time()
-    if verbose:
-        print("Total time to run wkt_to_G():", t7 - t0, "seconds")
 
     return  # Gout
 
 
 ################################################################################
 def main():
-    # min_subgraph_length_pix = 300
     simplify_graph = True  # True # False
-    verbose = False
     pickle_protocol = 4  # 4 is most recent, python 2.7 can't read 4
     node_iter = 10000  # start int for node naming
     edge_iter = 10000  # start int for edge naming
@@ -809,14 +764,12 @@ def main():
         config = Config(**cfg)
 
     # outut files
-    res_root_dir = os.path.join(config.path_results_root, config.test_results_dir)
     raw_data_dir = os.path.join(config.raw_data_dir)
 
-    csv_file = os.path.join(res_root_dir, config.wkt_submission)
-    graph_dir = os.path.join(res_root_dir, config.graph_dir)
+    csv_file = os.path.join(config.path_results_root, config.wkt_submission)
+    graph_dir = os.path.join(config.path_results_root, config.graph_dir)
     os.makedirs(graph_dir, exist_ok=True)
 
-    min_subgraph_length_pix = config.min_subgraph_length_pix
     min_spur_length_m = config.min_spur_length_m
 
     # read in wkt list
@@ -852,7 +805,6 @@ def main():
                 (
                     wkt_list,
                     im_file,
-                    min_subgraph_length_pix,
                     node_iter,
                     edge_iter,
                     min_spur_length_m,
@@ -862,7 +814,6 @@ def main():
                     out_file,
                     graph_dir,
                     n_threads,
-                    verbose,
                 )
             )
 

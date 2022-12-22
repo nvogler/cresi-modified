@@ -130,7 +130,6 @@ def slice_ims(
     df_pos = pd.DataFrame(pos_list, columns=pos_columns)
     df_pos.index = np.arange(len(df_pos))
 
-    # if True:  # verbose:
     print("  len df;", len(df_pos))
     print("  Time to slice arrays:", time.time() - t0, "seconds")
     print("  Total pixels in test image(s):", tot_pixels)
@@ -149,10 +148,10 @@ def main():
         config = Config(**cfg)
 
     # get input dir
-    path_tile_df_csv = os.path.join(config.results_dir, config.tile_df_csv)
+    path_tile_df_csv = os.path.join(config.path_results_root, config.tile_df_csv)
 
     # make output dirs
-    os.makedirs(config.results_dir, exist_ok=True)
+    os.makedirs(config.path_results_root, exist_ok=True)
     os.makedirs(config.sliced_dir, exist_ok=True)
 
     print("Output path for sliced images:", config.sliced_dir)

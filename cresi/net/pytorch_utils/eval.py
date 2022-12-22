@@ -59,20 +59,13 @@ def to_numpy(batch):
     return np.moveaxis(batch.data.cpu().numpy(), 1, -1)
 
 
-def predictor(model, batch, flips=flip.FLIP_NONE, verbose=True):
+def predictor(model, batch, flips=flip.FLIP_NONE):
+    print("  eval.py - predict() - executing...")
 
-    if verbose:
-        print("  eval.py - predict() - executing...")
-
-    # print ("run eval.predict()...")
-    # predict with tta on gpu
     pred1 = F.sigmoid(model(batch))
-    # with torch.no_grad():
-    #    pred1 = F.sigmoid(model(batch))
 
-    if verbose:
-        print("  eval.py - predict() - batch.shape:", batch.shape)
-        print("  eval.py - predict() - pred1.shape:", pred1.shape)
+    print("  eval.py - predict() - batch.shape:", batch.shape)
+    print("  eval.py - predict() - pred1.shape:", pred1.shape)
 
     if flips > flip.FLIP_NONE:
         pred2 = flip_tensor_lr(model(flip_tensor_lr(batch)))
@@ -91,7 +84,6 @@ def predictor(model, batch, flips=flip.FLIP_NONE, verbose=True):
 
 def read_model(path_model_weights, fold, n_gpus=4):
     print("Running eval.read_model()...")
-    # model = nn.DataParallel(torch.load(os.path.join('..', 'weights', project, 'fold{}_best.pth'.format(fold))))
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", SourceChangeWarning)
 
@@ -110,7 +102,7 @@ def read_model(path_model_weights, fold, n_gpus=4):
             )
 
         model.eval()
-        # print("  model:", model)
+
         print("  model sucessfully loaded")
         return model
 
@@ -148,7 +140,7 @@ class Evaluator:
         self.val_transforms = val_transforms
         os.makedirs(self.save_dir, exist_ok=True)
 
-    def predict(self, fold, val_indexes, weight_dir, verbose=False):
+    def predict(self, fold, val_indexes, weight_dir):
         global MOD
         global FLIPS
         global BORDER
@@ -193,45 +185,13 @@ class Evaluator:
             for data in pbar:
                 samples = torch.autograd.Variable(data["image"], volatile=True).cuda()
                 predicted = predictor(model, samples, flips=self.flips)
-                if verbose:
-                    print(
-                        "  eval.py -  - Evaluator - predict() - len samples:",
-                        len(samples),
-                    )
-                    print(
-                        "  eval.py - Evaluator - predict()- samples.shape:",
-                        samples.shape,
-                    )
-                    print(
-                        "  eval.py - Evaluator - predict() - predicted.shape:",
-                        predicted.shape,
-                    )
-                    print(
-                        "  eval.py - Evaluator - predict() - data['image'].shape:",
-                        data["image"].shape,
-                    )
+
                 self.process_batch(predicted, model, data, prefix=prefix)
         else:
             for data in pbar:
                 samples = torch.autograd.Variable(data["image"], volatile=True)
                 predicted = predictor(model, samples, flips=self.flips)
-                if verbose:
-                    print(
-                        "  eval.py -  - Evaluator - predict() - len samples:",
-                        len(samples),
-                    )
-                    print(
-                        "  eval.py - Evaluator - predict()- samples.shape:",
-                        samples.shape,
-                    )
-                    print(
-                        "  eval.py - Evaluator - predict() - predicted.shape:",
-                        predicted.shape,
-                    )
-                    print(
-                        "  eval.py - Evaluator - predict() - data['image'].shape:",
-                        data["image"].shape,
-                    )
+
                 self.process_batch(predicted, model, data, prefix=prefix)
         self.post_predict_action(prefix=prefix)
 
@@ -248,12 +208,3 @@ class Evaluator:
         prediction = self.cut_border(prediction)
         prediction = np.squeeze(prediction)
         self.save(name, prediction, prefix=prefix)
-
-    def save(self, name, prediction, prefix=""):
-        raise NotImplementedError
-
-    def process_batch(self, predicted, model, data, prefix=""):
-        raise NotImplementedError
-
-    def post_predict_action(self, prefix):
-        pass

@@ -4,7 +4,6 @@ import argparse
 
 from configs.config import Config
 
-
 ###############################################################################
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

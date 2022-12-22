@@ -1,4 +1,5 @@
 import cv2
+
 cv2.setNumThreads(0)
 cv2.ocl.setUseOpenCL(False)
 import numpy as np
@@ -14,10 +15,12 @@ def clipped(func):
     """
     wrapper to clip results of transform to image dtype value range
     """
+
     @wraps(func)
     def wrapped_function(img, *args, **kwargs):
         dtype, maxval = img.dtype, np.max(img)
         return clip(func(img, *args, **kwargs), dtype, maxval)
+
     return wrapped_function
 
 
@@ -57,10 +60,14 @@ def rotate(img, angle):
     :param angle: angle in degrees
     """
     height, width = img.shape[0:2]
-    mat = cv2.getRotationMatrix2D((width/2, height/2), angle, 1.0)
-    img = cv2.warpAffine(img, mat, (width, height),
-                         flags=cv2.INTER_LINEAR,
-                         borderMode=cv2.BORDER_REFLECT_101)
+    mat = cv2.getRotationMatrix2D((width / 2, height / 2), angle, 1.0)
+    img = cv2.warpAffine(
+        img,
+        mat,
+        (width, height),
+        flags=cv2.INTER_LINEAR,
+        borderMode=cv2.BORDER_REFLECT_101,
+    )
     return img
 
 
@@ -71,28 +78,34 @@ def shift_scale_rotate(img, angle, scale, dx, dy):
     """
     height, width = img.shape[:2]
 
-    cc = math.cos(angle/180*math.pi) * scale
-    ss = math.sin(angle/180*math.pi) * scale
+    cc = math.cos(angle / 180 * math.pi) * scale
+    ss = math.sin(angle / 180 * math.pi) * scale
     rotate_matrix = np.array([[cc, -ss], [ss, cc]])
 
-    box0 = np.array([[0, 0], [width, 0],  [width, height], [0, height], ])
-    box1 = box0 - np.array([width/2, height/2])
-    box1 = np.dot(box1, rotate_matrix.T) + np.array([width/2+dx*width, height/2+dy*height])
+    box0 = np.array([[0, 0], [width, 0], [width, height], [0, height],])
+    box1 = box0 - np.array([width / 2, height / 2])
+    box1 = np.dot(box1, rotate_matrix.T) + np.array(
+        [width / 2 + dx * width, height / 2 + dy * height]
+    )
 
     box0 = box0.astype(np.float32)
     box1 = box1.astype(np.float32)
     mat = cv2.getPerspectiveTransform(box0, box1)
-    img = cv2.warpPerspective(img, mat, (width, height),
-                              flags=cv2.INTER_LINEAR,
-                              borderMode=cv2.BORDER_REFLECT_101)
+    img = cv2.warpPerspective(
+        img,
+        mat,
+        (width, height),
+        flags=cv2.INTER_LINEAR,
+        borderMode=cv2.BORDER_REFLECT_101,
+    )
 
     return img
 
 
 def center_crop(img, height, width):
     h, w, c = img.shape
-    dy = (h-height)//2
-    dx = (w-width)//2
+    dy = (h - height) // 2
+    dx = (w - width) // 2
     y1 = dy
     y2 = y1 + height
     x1 = dx
@@ -118,13 +131,13 @@ def shift_hsv(img, hue_shift, sat_shift, val_shift):
 
 
 def shift_channels(img, r_shift, g_shift, b_shift):
-    img[...,0] = clip(img[...,0] + r_shift, np.uint8, 255)
-    img[...,1] = clip(img[...,1] + g_shift, np.uint8, 255)
-    img[...,2] = clip(img[...,2] + b_shift, np.uint8, 255)
+    img[..., 0] = clip(img[..., 0] + r_shift, np.uint8, 255)
+    img[..., 1] = clip(img[..., 1] + g_shift, np.uint8, 255)
+    img[..., 2] = clip(img[..., 2] + b_shift, np.uint8, 255)
     return img
 
 
-def clahe(img, clipLimit=2.0, tileGridSize=(8,8)):
+def clahe(img, clipLimit=2.0, tileGridSize=(8, 8)):
     img_yuv = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
     clahe = cv2.createCLAHE(clipLimit=clipLimit, tileGridSize=tileGridSize)
     img_yuv[:, :, 0] = clahe.apply(img_yuv[:, :, 0])
@@ -147,24 +160,23 @@ def channel_shuffle(img):
     return img
 
 
-def img_to_tensor(im, verbose=False):
-    '''AVE edit'''
-    im_out = np.moveaxis(im / (255. if im.dtype == np.uint8 else 1), -1, 0).astype(np.float32)
-    if verbose:
-        print ("augmentations.functiona.py.img_to_tensor(): im_out.shape:", im_out.shape)
-        print ("im_out.unique:", np.unique(im_out))
+def img_to_tensor(im):
+    """AVE edit"""
+    im_out = np.moveaxis(im / (255.0 if im.dtype == np.uint8 else 1), -1, 0).astype(
+        np.float32
+    )
+
     return im_out
 
 
-def mask_to_tensor(mask, num_classes, verbose=False):
-    '''AVE edit'''
+def mask_to_tensor(mask, num_classes):
+    """AVE edit"""
     if num_classes > 1:
         mask = img_to_tensor(mask)
     else:
-        mask = np.expand_dims(mask / (255. if mask.dtype == np.uint8 else 1), 0).astype(np.float32)
-    if verbose:
-        print ("augmentations.functiona.py.img_to_tensor(): mask.shape:", mask.shape)
-        print ("mask.unique:", np.unique(mask))
+        mask = np.expand_dims(
+            mask / (255.0 if mask.dtype == np.uint8 else 1), 0
+        ).astype(np.float32)
 
     return mask
 

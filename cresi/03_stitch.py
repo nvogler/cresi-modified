@@ -11,8 +11,7 @@ from configs.config import Config
 
 ###############################################################################
 def post_process_image(
-    df_pos_, data_dir, num_classes=1, im_prefix="", super_verbose=False
-):
+    df_pos_, data_dir, num_classes=1, im_prefix=""):
     """
     For a dataframe of image positions (df_pos_), and the tiles of that image,
     reconstruct the image. Image can be a single band mask, a 3-band image, a
@@ -74,10 +73,6 @@ def post_process_image(
         # rescale make slice?
         if rescale_factor != 1:
             mask_slice_refine = (mask_slice_refine / rescale_factor).astype(np.uint8)
-
-        # print("mask_slice_refine:", mask_slice_refine)
-        if super_verbose:
-            print("item:", item)
 
         x0, x1 = xmin, xmin + slice_x
         y0, y1 = ymin, ymin + slice_y
@@ -161,12 +156,8 @@ def main():
     # compression 0 to 9 (most compressed)
     compression_params = [cv2.IMWRITE_PNG_COMPRESSION, 5]
 
-    folds_dir = os.path.join(
-        config.path_results_root, config.test_results_dir, config.folds_save_dir
-    )
-    merge_dir = os.path.join(
-        config.path_results_root, config.test_results_dir, config.merged_dir
-    )
+    folds_dir = os.path.join(config.path_results_root, config.folds_save_dir)
+    merge_dir = os.path.join(config.path_results_root, config.merged_dir)
 
     if config.num_folds > 1:
         im_dir = merge_dir
@@ -176,20 +167,12 @@ def main():
         im_prefix = "fold0_"
 
     # output dirs
-    out_dir_mask_raw = os.path.join(
-        config.path_results_root, config.test_results_dir, config.stitched_dir_raw
-    )
-    out_dir_count = os.path.join(
-        config.path_results_root, config.test_results_dir, config.stitched_dir_count
-    )
-    out_dir_mask_norm = os.path.join(
-        config.path_results_root, config.test_results_dir, config.stitched_dir_norm
-    )
+    out_dir_mask_raw = os.path.join(config.path_results_root, config.stitched_dir_raw)
+    out_dir_count = os.path.join(config.path_results_root, config.stitched_dir_count)
+    out_dir_mask_norm = os.path.join(config.path_results_root, config.stitched_dir_norm)
 
     # assume tile csv is in data dir, not root dir
-    path_tile_df_csv = os.path.join(
-        config.path_results_root, config.test_results_dir, config.tile_df_csv
-    )
+    path_tile_df_csv = os.path.join(config.path_results_root, config.tile_df_csv)
 
     # make dirs
     os.makedirs(out_dir_mask_norm, exist_ok=True)
@@ -198,13 +181,13 @@ def main():
 
     # read in df_pos
     df_pos_tot = pd.read_csv(path_tile_df_csv)
-    
+
     t0 = time.time()
     ttot = 0
 
     # save for each individual image
     idxs = np.sort(np.unique(df_pos_tot["idx"]))
-    
+
     for idx in idxs:
         # filter by idx
         df_pos = df_pos_tot.loc[df_pos_tot["idx"] == idx]
@@ -216,7 +199,6 @@ def main():
             im_dir,
             im_prefix=im_prefix,
             num_classes=config.num_classes,
-            super_verbose=False,
         )
         t2 = time.time()
         ttot += t2 - t1
@@ -273,11 +255,11 @@ def main():
 
         if save_overlay_and_raw:
             cv2.imwrite(out_file_count, overlay_count, compression_params)
-            
+
         del overlay_count
 
     t3 = time.time()
-    
+
     print(
         "Time to run stitch.py and create large masks (and save):", t3 - t0, "seconds"
     )

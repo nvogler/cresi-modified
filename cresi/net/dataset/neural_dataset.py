@@ -52,66 +52,6 @@ class Dataset:
         return self.croppers[image_id]
 
 
-class TrainDataset(Dataset):
-    """
-    dataset for training with random crops
-    """
-    def __init__(self, image_provider, image_indexes, config, stage='train', 
-                 transforms=None, partly_sequential=False, verbose=False):
-        super(TrainDataset, self).__init__(image_provider, image_indexes, 
-             config, stage, transforms=transforms)
-        self.keys.add('mask')
-        self.partly_sequential = partly_sequential
-        self.inner_idx = 9
-        self.idx = 0
-        if verbose:
-            print("nueral_dataset.py - TrainDataset - len imaage_indexes:", len(image_indexes))
-
-    def __getitem__(self, idx, verbose=False):
-        if self.partly_sequential:
-            if verbose:
-                print("nueral_dataset.py - TrainDataset - __getitem__ partly_sequential:", self.partly_sequential)
-            # use this if your images are too big
-            if self.inner_idx > 8:
-                self.idx = idx
-                self.inner_idx = 0
-            self.inner_idx += 1
-            im_idx = self.image_indexes[self.idx % len(self.image_indexes)]
-        else:
-            im_idx = self.image_indexes[idx % len(self.image_indexes)]
-
-        if verbose:
-            print("nueral_dataset.py - TrainDataset - __getitem__ im_idx:", im_idx)
-
-        cropper = self.get_cropper(im_idx)
-        item = self.image_provider[im_idx]
-        sx, sy = cropper.random_crop_coords()
-        if cropper.use_crop and self.image_provider.has_alpha:
-            for i in range(10):
-                alpha = cropper.crop_image(item.alpha, sx, sy)
-                if np.mean(alpha) > 5:
-                    break
-                sx, sy = cropper.random_crop_coords()
-            else:
-                return self.__getitem__(random.randint(0, len(self.image_indexes)))
-
-        im = cropper.crop_image(item.image, sx, sy)
-        if not np.any(im > 5):
-            # re-try random if image is empty
-            return self.__getitem__(random.randint(0, len(self.image_indexes)))
-        mask = cropper.crop_image(item.mask, sx, sy)
-        data = {'image': im, 'mask': mask, 'image_name': item.fn}
-
-        #print ("neural_dataset.py data:", data)
-
-        return self.transforms(**data)
-
-    def __len__(self, verbose=False):
-        z = len(self.image_indexes) * max(self.config.epoch_size, 1)
-        if verbose:
-            print("nueral_dataset.py - TrainDataset - __len__:", z)
-        return z # epoch size is len images
-
 class SequentialDataset(Dataset):
     """
     dataset for test and base dataset for validation.
